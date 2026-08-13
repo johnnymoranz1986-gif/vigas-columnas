@@ -8,7 +8,7 @@ import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 
-TOKEN = "8978402989:AAEcJEXuFFHQImwQVJph58ZmZpMpn7xSfqk"
+TOKEN = "8978402989:AAFKlKtf_Aa-qyeyNa1lw3T8sJkLzpDKK4Y"
 bot = telebot.TeleBot(TOKEN)
 
 # Servidor HTTP dummy para mantener activo el Web Service en Render
