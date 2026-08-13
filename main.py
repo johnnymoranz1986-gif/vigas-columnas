@@ -4,7 +4,7 @@ import telebot
 from telebot import types
 
 # Configuración del Bot (Asegúrate de poner tu token real o usar variables de entorno)
-TOKEN = os.getenv("8978402989:AAFKlKtf_Aa-qyeyNa1lw3T8sJkLzpDKK4Y")
+TOKEN = "8978402989:AAFKlKtf_Aa-qyeyNa1lw3T8sJkLzpDKK4Y"
 bot = telebot.TeleBot(TOKEN)
 
 class Materiales:
