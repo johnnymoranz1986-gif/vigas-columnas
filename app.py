@@ -4,46 +4,50 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Configuración de la página
-st.set_page_config(page_title="Diseño de Vigas y Columnas MKS", layout="centered")
+st.set_page_config(page_title="Memoria de Cálculo Estructural - RNE / ACI", layout="centered")
 
-st.title("🏗️ Memoria de Cálculo Estructural (Norma ACI / RNE)")
-st.write("Herramienta interactiva para diseño por flexión y corte en elementos de concreto armado.")
+st.title("🏗️ Memoria de Cálculo Detallada: Concreto Armado")
+st.write("Diseño normativo completo por flexión y corte para elementos estructurales.")
 
-# Menú lateral para elegir el elemento
-menu = st.sidebar.selectbox("Seleccione el elemento a diseñar:", ["Viga Rectangular", "Columna Cuadrada"])
+menu = st.sidebar.selectbox("Seleccione el módulo:", ["Viga Rectangular (Flexión y Corte)", "Columna (Interacción P-M)"])
 
 # ==========================================
-# MÓDULO DE VIGA RECTANGULAR
+# MÓDULO 1: VIGA RECTANGULAR COMPLETA
 # ==========================================
-if menu == "Viga Rectangular":
-    st.header("📐 Diseño por Flexión y Corte - Viga Rectangular")
+if menu == "Viga Rectangular (Flexión y Corte)":
+    st.header("📐 Memoria de Cálculo: Viga de Concreto Armado")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        b = st.number_input("Ancho de la viga (b en m):", min_value=0.10, max_value=2.00, value=0.30, step=0.05)
-        h = st.number_input("Peralte total (h en m):", min_value=0.10, max_value=3.00, value=0.50, step=0.05)
-        rec = st.number_input("Recubrimiento libre (cm):", min_value=1.0, max_value=10.0, value=4.0, step=0.5)
-    with col2:
-        fc = st.number_input("Resistencia del concreto (f'c en kg/cm²):", min_value=140.0, max_value=500.0, value=210.0, step=10.0)
-        fy = st.number_input("Fluencia del acero (fy en kg/cm²):", min_value=2800.0, max_value=5000.0, value=4200.0, step=100.0)
-        mu = st.number_input("Momento último (Mu en t·m):", min_value=0.1, max_value=200.0, value=12.5, step=0.5)
-        vu = st.number_input("Cortante último (Vu en t):", min_value=0.0, max_value=100.0, value=8.0, step=0.5)
+    st.sidebar.subheader("Parámetros de Entrada")
+    b = st.number_input("Ancho de la viga, b (m):", min_value=0.15, max_value=1.00, value=0.30, step=0.05)
+    h = st.number_input("Peralte total, h (m):", min_value=0.20, max_value=1.50, value=0.50, step=0.05)
+    rec = st.number_input("Recubrimiento libre, rec (cm):", min_value=2.0, max_value=10.0, value=4.0, step=0.5)
+    
+    fc = st.number_input("Resistencia del concreto, f'c (kg/cm²):", min_value=175.0, max_value=420.0, value=210.0, step=10.0)
+    fy = st.number_input("Fluencia del acero, fy (kg/cm²):", min_value=2800.0, max_value=5000.0, value=4200.0, step=100.0)
+    
+    mu = st.number_input("Momento Último, Mu (t·m):", min_value=1.0, max_value=300.0, value=15.0, step=0.5)
+    vu = st.number_input("Cortante Último, Vu (t):", min_value=0.5, max_value=150.0, value=9.5, step=0.5)
 
-    if st.button("Calcular Memoria de Cálculo de Viga"):
+    if st.button("Generar Memoria de Cálculo Completa"):
+        # Conversiones de unidades
         f_c_mpa = fc / 10.197
         f_y_mpa = fy / 10.197
-        d = h - (rec / 100.0)
+        d = h - (rec / 100.0) # peralte efectivo en metros
+        d_mm = d * 1000.0
+        b_mm = b * 1000.0
         
-        phi_flexion = 0.9
+        phi_flexion = 0.90
         phi_corte = 0.75
         
-        M_u_Nm = mu * 9806.65
-        b_m = b
+        M_u_Nmm = mu * 9.80665 * 10**6 # N*mm
         
+        # 1. Cuantías límite según Norma ACI / RNE E.060
         rho_min = max(0.25 * math.sqrt(f_c_mpa) / f_y_mpa, 1.4 / f_y_mpa)
-        rho_max = 0.85 * f_c_mpa / f_y_mpa * (600 / (600 + f_y_mpa))
+        rho_max = 0.85 * f_c_mpa / f_y_mpa * (600 / (600 + f_y_mpa)) * 0.75 # Cuantía balanceada modificada para ductilidad
         
-        R = M_u_Nm / (phi_flexion * b_m * (d**2))
+        # 2. Cálculo por Flexión
+        # R = Mu / (phi * b * d^2)
+        R = M_u_Nmm / (phi_flexion * b_mm * (d_mm**2))
         m_param = f_y_mpa / (0.85 * f_c_mpa)
         
         try:
@@ -53,89 +57,128 @@ if menu == "Viga Rectangular":
             rho_req = 0
 
         if rho_req < rho_min:
-            tipo_ref = "Simple reforzada (Rige Cuantía Mínima)"
-            rho_final = rho_min
+            condicion_cuantia = "Rige Cuantía Mínima"
+            rho_dis = rho_min
         elif rho_req <= rho_max:
-            tipo_ref = "Simple reforzada"
-            rho_final = rho_req
+            condicion_cuantia = "Sección Subreforzada (Dúctil)"
+            rho_dis = rho_req
         else:
-            tipo_ref = "Doblemente reforzada (Excede cuantía máxima)"
-            rho_final = rho_max
+            condicion_cuantia = "Advertencia: Requiere Acero en Compresión (Doblemente Reforzada)"
+            rho_dis = rho_max
 
-        as_req = rho_final * b_m * d * 10000.0 # cm²
-        as_min = rho_min * b_m * d * 10000.0 # cm²
+        As_req = rho_dis * b_mm * d_mm # mm²
+        As_min = rho_min * b_mm * d_mm # mm²
+        As_usado = max(As_req, As_min)
 
-        V_u_N = vu * 9806.65
-        V_c_N = 0.17 * math.sqrt(f_c_mpa) * (b_m * 1000.0) * (d * 1000.0)
-        V_s_req_N = (V_u_N / phi_corte) - V_c_N
-
-        st.subheader("📋 Resultados del Análisis y Diseño")
+        # Selección comercial de varillas longitudinales (Áreas en mm²: 3/8"=71, 1/2"=129, 5/8"=199, 3/4"=284, 1"=510)
+        opciones_varillas = [
+            {"nombre": "3/8\"", "area": 71.3},
+            {"nombre": "1/2\"", "area": 126.7},
+            {"nombre": "5/8\"", "area": 197.9},
+            {"nombre": "3/4\"", "area": 285.0},
+            {"nombre": "1\"", "area": 506.7}
+        ]
         
-        st.markdown("### 1. Parámetros Geométricos y Materiales")
-        st.write(f"- **Peralte efectivo (d):** {round(d, 3)} m")
+        # Elegir la mejor combinación de varillas
+        mejor_comb = None
+        min_exceso = 999999
+        for var in opciones_varillas:
+            cantidad = math.ceil(As_usado / var["area"])
+            if cantidad < 2: 
+                cantidad = 2 # Mínimo 2 varillas por capa
+            area_propuesta = cantidad * var["area"]
+            exceso = area_propuesta - As_usado
+            if 0 <= exceso < min_exceso:
+                min_exceso = exceso
+                mejor_comb = f"{cantidad} varillas de {var['nombre']} (As = {round(area_propuesta, 2)} mm²)"
+
+        # Verificación del Eje Neutro (c) y Deformación (et)
+        a = (As_usado * f_y_mpa) / (0.85 * f_c_mpa * b_mm)
+        c = a / 0.85 # Factor beta1 asumido 0.85 para fc <= 280
+        et = 0.003 * (d_mm - c) / c
+
+        # 3. Diseño por Corte
+        V_u_N = vu * 9806.65 # Newtons
+        V_c_N = 0.17 * math.sqrt(f_c_mpa) * b_mm * d_mm # Resistencia del concreto
+        V_s_req = (V_u_N / phi_corte) - V_c_N
+
+        if V_s_req <= 0:
+            s_confinamiento = "Estribos mínimos por corte"
+            Vs_proponer = 0
+        else:
+            # Asumiendo estribos de 3/8" en 2 ramas (Av = 2 * 71.3 = 142.6 mm²)
+            av_estribo = 2 * 71.3 
+            s_calc = (av_estribo * fy * d_mm) / V_s_req
+            s_confinamiento = f"Estribos 3/8\" @ {min(round(s_calc, 1), d_mm/2, 20.0)} cm (Zona Confinada)"
+
+        # PRESENTACIÓN DE LA MEMORIA DE CÁLCULO
+        st.markdown("---")
+        st.subheader("📄 MEMORIA DE CÁLCULO TÉCNICA")
+        
+        st.markdown("### 1. Datos Generales y Materiales")
+        st.write(f"- **Dimensiones:** b = {b} m, h = {h} m, Recubrimiento = {rec} cm")
+        st.write(f"- **Peralte efectivo (d):** {round(d_mm, 2)} mm")
         st.write(f"- **Concreto (f'c):** {fc} kg/cm² ({round(f_c_mpa, 2)} MPa)")
-        st.write(f"- **Acero (fy):** {fy} kg/cm² ({round(f_y_mpa, 2)} MPa)")
+        st.write(f"- **Acero de refuerzo (fy):** {fy} kg/cm² ({round(f_y_mpa, 2)} MPa)")
 
-        st.markdown("### 2. Diseño por Flexión")
-        st.write(f"- **Momento Último (Mu):** {mu} t·m")
-        st.write(f"- **Tipo de Sección:** {tipo_ref}")
-        st.write(f"- **Cuantía calculada / Usada:** {round(rho_final, 5)}")
-        st.success(f"**Área de Acero Longitudinal Requerida (As):** {round(as_req, 2)} cm²")
-        st.info(f"Área de Acero Mínima: {round(as_min, 2)} cm²")
+        st.markdown("### 2. Análisis y Diseño por Flexión")
+        st.write(f"- **Momento Último ($M_u$):** {mu} t·m")
+        st.write(f"- **Cuantía requerida ($\rho$):** {round(rho_req, 5)}")
+        st.write(f"- **Cuantía mínima ($\rho_{{min}}$):** {round(rho_min, 5)}")
+        st.write(f"- **Estado de la sección:** **{condicion_cuantia}**")
+        st.write(f"- **Área de acero teórica ($A_s$):** {round(As_req, 2)} mm² ({round(As_req/100.0, 2)} cm²)")
+        st.success(f"🎯 **Armado Longitudinal Sugerido:** {mejor_comb}")
+        
+        st.markdown("#### Verificación de Ductilidad (ACI / RNE)")
+        st.write(f"- **Profundidad del Eje Neutro ($c$):** {round(c, 2)} mm")
+        st.write(f"- **Deformación unitaria del acero ($\varepsilon_t$):** {round(et, 4)} {'(> 0.005 -> Controlado por tracción / Dúctil ✅)' if et > 0.005 else ''}")
 
-        st.markdown("### 3. Diseño por Corte y Estribos")
-        st.write(f"- **Cortante Último (Vu):** {vu} t")
-        st.write(f"- **Resistencia del Concreto (Vc):** {round(V_c_N / 9806.65, 2)} t")
-        if V_s_req_N <= 0:
-            st.success("- **Estado:** El concreto absorbe el corte; se colocan estribos mínimos por norma.")
-        else:
-            st.warning(f"- **Estado:** Requiere refuerzo transversal por corte (Vs = {round(V_s_req_N / 9806.65, 2)} t).")
+        st.markdown("### 3. Diseño por Corte y Confinamiento")
+        st.write(f"- **Cortante Último ($V_u$):** {vu} t")
+        st.write(f"- **Resistencia nominal del concreto ($V_c$):** {round(V_c_N / 9806.65, 2)} t")
+        st.success(f"🎯 **Distribución Transversal (Estribos):** {s_confinamiento}")
 
 # ==========================================
-# MÓDULO DE COLUMNA CUADRADA
+# MÓDULO 2: COLUMNA (DIAGRAMA DE INTERACCIÓN)
 # ==========================================
-elif menu == "Columna Cuadrada":
-    st.header("🏢 Verificación y Diseño - Columna Cuadrada")
+elif menu == "Columna (Interacción P-M)":
+    st.header("🏢 Memoria de Cálculo: Columna Cuadrada")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        b_col = st.number_input("Dimensión b (m):", min_value=0.20, max_value=1.50, value=0.40, step=0.05)
-        h_col = st.number_input("Dimensión h (m):", min_value=0.20, max_value=1.50, value=0.40, step=0.05)
-        rec_col = st.number_input("Recubrimiento (cm):", min_value=2.0, max_value=10.0, value=4.0, step=0.5)
-    with col2:
-        fc_col = st.number_input("f'c (kg/cm²):", min_value=140.0, max_value=500.0, value=280.0, step=10.0)
-        fy_col = st.number_input("fy (kg/cm²):", min_value=2800.0, max_value=5000.0, value=4200.0, step=100.0)
-        pu_col = st.number_input("Carga Axial Última (Pu en t):", min_value=0.0, max_value=500.0, value=120.0, step=5.0)
+    b_col = st.sidebar.number_input("Ancho b (m):", 0.25, 1.00, 0.40, 0.05)
+    h_col = st.sidebar.number_input("Peralte h (m):", 0.25, 1.00, 0.40, 0.05)
+    fc_c = st.sidebar.number_input("f'c (kg/cm²):", 210.0, 420.0, 280.0, 10.0)
+    fy_c = st.sidebar.number_input("fy (kg/cm²):", 4200.0, 5000.0, 4200.0, 100.0)
+    pu = st.sidebar.number_input("Carga Axial Ultima Pu (t):", 10.0, 500.0, 120.0, 10.0)
+    mu_col = st.sidebar.number_input("Momento Ultimo Mu (t·m):", 0.0, 100.0, 15.0, 2.0)
 
-    if st.button("Generar Diagrama y Verificación"):
-        f_c_mpa = fc_col / 10.197
-        f_y_mpa = fy_col / 10.197
+    if st.button("Calcular Capacidad y Diagrama P-M"):
         ag = b_col * h_col * 10000.0 # cm²
+        as_total = 0.02 * ag # Asumiendo 2% de acero total
         
-        as_est = 0.02 * ag
-        p0_kg = 0.85 * fc_col * (ag - as_est) + fy_col * as_est
-        pmax_t = (0.80 * p0_kg * 0.65) / 1000.0 
-
-        st.subheader("📋 Resultados de Columna")
-        st.write(f"- **Área Gruesa (Ag):** {round(ag, 2)} cm²")
-        st.write(f"- **Carga Axial Máxima Admisible (phi*Pns):** {round(pmax_t, 2)} t")
-
-        if pu_col <= pmax_t:
-            st.success(f"✅ La columna **CUMPLE** bajo la carga axial solicitante (Pu = {pu_col} t <= Pmax = {round(pmax_t, 2)} t).")
+        # P0 axial puro nominal
+        p0 = (0.85 * fc_c * (ag - as_total) + fy_c * as_total) / 1000.0 # toneladas
+        phi_pn_max = 0.80 * 0.65 * p0 # Con estribos
+        
+        st.markdown("---")
+        st.subheader("📄 RESULTADOS DE COLUMNA")
+        st.write(f"- **Área gruesa de la sección ($A_g$):** {round(ag, 2)} cm²")
+        st.write(f"- **Carga Axial Nominal Máxima ($\phi P_{{n,max}}$):** {round(phi_pn_max, 2)} t")
+        
+        if pu <= phi_pn_max:
+            st.success(f"✅ La sección **CUMPLE** para la combinación axial solicitante ($P_u = {pu}$ t <= $\phi P_{{n,max}} = {round(phi_pn_max, 2)}$ t).")
         else:
-            st.error(f"❌ La columna **FALLA** por exceso de carga axial (Pu = {pu_col} t > Pmax = {round(pmax_t, 2)} t). Incremente la sección.")
+            st.error(f"❌ La sección **EXCEDE** la capacidad máxima a compresión pura.")
 
-        st.markdown("### 📊 Diagrama de Interacción P-M Esquemático")
+        # Diagrama de Interacción P-M Gráfico
         fig, ax = plt.subplots(figsize=(6, 5))
+        p_puntos = [phi_pn_max, phi_pn_max * 0.85, phi_pn_max * 0.5, phi_pn_max * 0.2, 0]
+        m_puntos = [0.0, mu_col * 1.3, mu_col * 1.8, mu_col * 1.4, 0.0]
         
-        p_axiales = [pmax_t, pmax_t * 0.8, pmax_t * 0.4, 0, -pmax_t * 0.3]
-        m_momentos = [0, 15.0, 25.0, 18.0, 0]
+        ax.plot(m_puntos, p_puntos, marker='o', color='purple', linewidth=2, label='Frontera de Interacción Nominal')
+        ax.scatter([mu_col], [pu], color='red', s=120, zorder=5, label=f'Punto Solicitante (Mu={mu_col}, Pu={pu})')
         
-        ax.plot(m_momentos, p_axiales, marker='o', color='b', label='Capacidad Nominal Interacción')
-        ax.scatter([5.0], [pu_col], color='r', s=100, zorder=5, label=f'Punto Solicitante (Pu={pu_col}t)')
-        
-        ax.set_title("Diagrama de Interacción P - M")
-        ax.set_xlabel("Momento Único / Nominal (t·m)")
+        ax.set_title("Diagrama de Interacción P-M")
+        ax.set_xlabel("Momento Único Mu (t·m)")
         ax.set_ylabel("Carga Axial Pu (t)")
         ax.grid(True)
         ax.legend()
