@@ -1,3 +1,4 @@
-pyTelegramBotAPI
+streamlit
 matplotlib
-reportlab
+numpy
+
