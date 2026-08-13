@@ -30,7 +30,6 @@ if menu == "Viga Rectangular":
         vu = st.number_input("Cortante último (Vu en t):", min_value=0.0, max_value=100.0, value=8.0, step=0.5)
 
     if st.button("Calcular Memoria de Cálculo de Viga"):
-        # Conversiones y cálculos internos
         f_c_mpa = fc / 10.197
         f_y_mpa = fy / 10.197
         d = h - (rec / 100.0)
@@ -41,7 +40,6 @@ if menu == "Viga Rectangular":
         M_u_Nm = mu * 9806.65
         b_m = b
         
-        # Cuantías
         rho_min = max(0.25 * math.sqrt(f_c_mpa) / f_y_mpa, 1.4 / f_y_mpa)
         rho_max = 0.85 * f_c_mpa / f_y_mpa * (600 / (600 + f_y_mpa))
         
@@ -67,7 +65,6 @@ if menu == "Viga Rectangular":
         as_req = rho_final * b_m * d * 10000.0 # cm²
         as_min = rho_min * b_m * d * 10000.0 # cm²
 
-        # Corte
         V_u_N = vu * 9806.65
         V_c_N = 0.17 * math.sqrt(f_c_mpa) * (b_m * 1000.0) * (d * 1000.0)
         V_s_req_N = (V_u_N / phi_corte) - V_c_N
@@ -115,11 +112,9 @@ elif menu == "Columna Cuadrada":
         f_y_mpa = fy_col / 10.197
         ag = b_col * h_col * 10000.0 # cm²
         
-        # Estimación simplificada de capacidad axial pura a compresión (P0)
-        # Asumiendo 2% de acero longitudinal aproximado
         as_est = 0.02 * ag
         p0_kg = 0.85 * fc_col * (ag - as_est) + fy_col * as_est
-        pmax_t = (0.80 * p0_kg * 0.65) / 1000.0 # Con estribos y factor phi=0.65
+        pmax_t = (0.80 * p0_kg * 0.65) / 1000.0 
 
         st.subheader("📋 Resultados de Columna")
         st.write(f"- **Área Gruesa (Ag):** {round(ag, 2)} cm²")
@@ -130,18 +125,15 @@ elif menu == "Columna Cuadrada":
         else:
             st.error(f"❌ La columna **FALLA** por exceso de carga axial (Pu = {pu_col} t > Pmax = {round(pmax_t, 2)} t). Incremente la sección.")
 
-        # Generar Gráfico de Interacción Simplificado
         st.markdown("### 📊 Diagrama de Interacción P-M Esquemático")
         fig, ax = plt.subplots(figsize=(6, 5))
         
-        # Puntos aproximados de control del diagrama de interacción
         p_axiales = [pmax_t, pmax_t * 0.8, pmax_t * 0.4, 0, -pmax_t * 0.3]
         m_momentos = [0, 15.0, 25.0, 18.0, 0]
         
         ax.plot(m_momentos, p_axiales, marker='o', color='b', label='Capacidad Nominal Interacción')
         ax.scatter([5.0], [pu_col], color='r', s=100, zorder=5, label=f'Punto Solicitante (Pu={pu_col}t)')
         
-        ax.set-title ? # Corregido abajo en texto plano
         ax.set_title("Diagrama de Interacción P - M")
         ax.set_xlabel("Momento Único / Nominal (t·m)")
         ax.set_ylabel("Carga Axial Pu (t)")
